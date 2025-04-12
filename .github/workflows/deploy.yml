@@ -1,0 +1,40 @@
+name: "Build Lambda & Trigger Infra"
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código do Lambda
+        uses: actions/checkout@v4
+
+      - name: Instalar dependências do Lambda
+        run: npm install axios pg aws-sdk
+
+      - name: Gerar o .zip do Lambda
+        run: zip -r zodh-authorizer.zip .
+
+      - name: Gerar tag dinâmica com SHA
+        id: tag
+        run: |
+          TAG="commit-$(git rev-parse --short HEAD)"
+          echo "TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Criar release no GitHub
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.TAG }}
+          files: ./zodh-authorizer.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Disparar workflow no repositório de Infra
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          repository: Zodh/zodh-infrastructure-configuration
+          event-type: atualizar-infra
