@@ -16,7 +16,15 @@ jobs:
         run: npm install axios pg aws-sdk
 
       - name: Gerar o .zip do Lambda
-        run: zip -r zodh-authorizer.zip .
+        run: |
+          # Certificando-se de que estamos no diretório correto
+          echo "Diretório atual: $(pwd)"
+          
+          # Listando os arquivos para garantir que o index.js e node_modules estão no lugar certo
+          ls -la
+          
+          # Gerar o .zip do código
+          zip -r zodh-authorizer.zip * 
 
       - name: Gerar tag dinâmica com SHA
         id: tag
