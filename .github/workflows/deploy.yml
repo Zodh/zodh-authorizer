@@ -1,4 +1,4 @@
-name: "Build Lambda & Trigger Infra"
+name: "Build & Deploy Lambda to AWS"
 
 on:
   push:
@@ -17,32 +17,21 @@ jobs:
 
       - name: Gerar o .zip do Lambda
         run: |
-          # Certificando-se de que estamos no diretório correto
-          echo "Diretório atual: $(pwd)"
-          
-          # Listando os arquivos para garantir que o index.js e node_modules estão no lugar certo
-          ls -la
-          
-          # Gerar o .zip do código
-          zip -r zodh-authorizer.zip * 
+          zip -r zodh-authorizer.zip *
 
-      - name: Gerar tag dinâmica com SHA
-        id: tag
+      - name: Configurar credenciais da AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Atualizar todas as funções Lambda na AWS
         run: |
-          TAG="commit-$(git rev-parse --short HEAD)"
-          echo "TAG=$TAG" >> $GITHUB_ENV
-
-      - name: Criar release no GitHub
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ env.TAG }}
-          files: ./zodh-authorizer.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Disparar workflow no repositório de Infra
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          repository: Zodh/zodh-infrastructure-configuration
-          event-type: atualizar-infra
+          for function in zodh-authorizer-sign-up zodh-authorizer-confirmer zodh-authorizer-sign-in; do
+            echo "Atualizando função: $function"
+            aws lambda update-function-code \
+              --function-name $function \
+              --zip-file fileb://zodh-authorizer.zip
+          done
