@@ -1,23 +1,21 @@
-name: "Build & Deploy Lambda to AWS"
+name: "Deploy Lambda to AWS"
 
 on:
-  push:
-    branches: [ "main" ]
+  workflow_run:
+    workflows: ["Build Lambda Package"]
+    types:
+      - completed
 
 jobs:
-  build_and_deploy:
-    runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-20.04
 
     steps:
-      - name: Checkout do código do Lambda
-        uses: actions/checkout@v4
-
-      - name: Instalar dependências do Lambda
-        run: npm install axios pg aws-sdk
-
-      - name: Gerar o .zip do Lambda
-        run: |
-          zip -r zodh-authorizer.zip *
+      - name: Baixar artefato gerado no workflow de build
+        uses: actions/download-artifact@v3
+        with:
+          name: zodh-authorizer-zip
+          path: ./artifact
 
       - name: Configurar credenciais da AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -27,11 +25,13 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Atualizar todas as funções Lambda na AWS
+      - name: Atualizar funções Lambda na AWS
         run: |
-          for function in zodh-authorizer-sign-up zodh-authorizer-confirmer zodh-authorizer-sign-in; do
+          FUNCTIONS=("zodh-authorizer-sign-up" "zodh-authorizer-confirmer" "zodh-authorizer-sign-in")
+          for function in "${FUNCTIONS[@]}"; do
             echo "Atualizando função: $function"
             aws lambda update-function-code \
               --function-name $function \
-              --zip-file fileb://zodh-authorizer.zip
+              --zip-file fileb://artifact/zodh-authorizer.zip \
+              --publish  # Para garantir que a nova versão seja publicada
           done
