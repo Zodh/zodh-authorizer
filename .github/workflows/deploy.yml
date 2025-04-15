@@ -19,10 +19,10 @@ jobs:
           node-version: '18'
 
       - name: Install dependencies
-        run: npm install --production axios pg
+        run: npm install axios pg
 
       - name: Zip code for Lambda
-        run: zip -r zodh-authorizer.zip . -x "*.git*" "node_modules/.cache/*"
+        run: zip -r -y zodh-authorizer.zip . -x ".git/*" ".github/*" "node_modules/.cache/*" "node_modules/**/node_modules/*"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
