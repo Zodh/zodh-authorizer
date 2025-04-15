@@ -32,20 +32,27 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Send zip to S3
+        run: |
+          aws s3 cp zodh-authorizer.zip s3://zodh-lambda-bucket/zodh-authorizer.zip
+
       - name: Deploy to Sign Up
         run: |
           aws lambda update-function-code \
             --function-name zodh-authorizer-sign-up \
-            --zip-file fileb://zodh-authorizer.zip
+            --s3-bucket zodh-lambda-bucket \
+            --s3-key zodh-authorizer.zip
 
       - name: Deploy to Sign In
         run: |
           aws lambda update-function-code \
             --function-name zodh-authorizer-sign-in \
-            --zip-file fileb://zodh-authorizer.zip
+            --s3-bucket zodh-lambda-bucket \
+            --s3-key zodh-authorizer.zip
 
       - name: Deploy to Confirmer
         run: |
           aws lambda update-function-code \
             --function-name zodh-authorizer-confirmer \
-            --zip-file fileb://zodh-authorizer.zip
+            --s3-bucket zodh-lambda-bucket \
+            --s3-key zodh-authorizer.zip
