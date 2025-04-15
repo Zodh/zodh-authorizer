@@ -1,37 +1,51 @@
-name: "Build & Deploy Lambda to AWS"
+name: Deploy to AWS Lambda
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  build_and_deploy:
-    runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-20.04
 
     steps:
-      - name: Checkout do código do Lambda
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Instalar dependências do Lambda
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
         run: npm install axios pg aws-sdk
 
-      - name: Gerar o .zip do Lambda
-        run: |
-          zip -r zodh-authorizer.zip *
+      - name: Zip code for Lambda
+        run: zip -r zodh-authorizer.zip . -x "*.git*" "node_modules/aws-sdk/*"
 
-      - name: Configurar credenciais da AWS
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Atualizar todas as funções Lambda na AWS
+      - name: Deploy to Sign Up
         run: |
-          for function in zodh-authorizer-sign-up zodh-authorizer-confirmer zodh-authorizer-sign-in; do
-            echo "Atualizando função: $function"
-            aws lambda update-function-code \
-              --function-name $function \
-              --zip-file fileb://zodh-authorizer.zip
-          done
+          aws lambda update-function-code \
+            --function-name zodh-authorizer-sign-up \
+            --zip-file fileb://zodh-authorizer.zip
+
+      - name: Deploy to Sign In
+        run: |
+          aws lambda update-function-code \
+            --function-name zodh-authorizer-sign-in \
+            --zip-file fileb://zodh-authorizer.zip
+
+      - name: Deploy to Confirmer
+        run: |
+          aws lambda update-function-code \
+            --function-name zodh-authorizer-confirmer \
+            --zip-file fileb://zodh-authorizer.zip
